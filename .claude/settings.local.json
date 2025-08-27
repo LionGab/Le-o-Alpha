@@ -18,9 +18,19 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:attiliojohner.github.io)",
       "Bash(git rm:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(git remote remove:*)",
+      "Bash(npm install)",
+      "Bash(npm run:*)",
+      "WebFetch(domain:usecloser.com.br)",
+      "Bash(sed:*)",
+      "Bash(grep:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\Users\\User"
+    ]
   }
 }
