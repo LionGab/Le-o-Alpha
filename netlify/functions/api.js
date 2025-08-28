@@ -1,11 +1,27 @@
 // Netlify Function - API principal
-const { neon } = require('@neondatabase/serverless');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Redis = require('ioredis');
 
-// Configuração do NeonDB
-const sql = neon(process.env.DATABASE_URL);
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+// Configuração PostgreSQL (Neon)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
+// Configuração Redis (Upstash)
+const redis = new Redis(process.env.REDIS_URL, {
+  tls: {},
+  retryDelayOnFailover: 100,
+  enableReadyCheck: false,
+  lazyConnect: true,
+});
+
+const JWT_SECRET = process.env.JWT_SECRET || 'sistema_disciplinar_secret_key_2025';
 
 // Helper para CORS
 const headers = {
@@ -42,9 +58,8 @@ exports.handler = async (event, context) => {
       const { email, password } = JSON.parse(event.body);
       
       // Buscar usuário
-      const users = await sql`
-        SELECT * FROM users WHERE email = ${email} LIMIT 1
-      `;
+      const result = await pool.query('SELECT * FROM usuarios WHERE email = $1 LIMIT 1', [email]);
+      const users = result.rows;
       
       if (!users[0]) {
         return {
@@ -55,7 +70,7 @@ exports.handler = async (event, context) => {
       }
 
       // Verificar senha
-      const validPassword = await bcrypt.compare(password, users[0].password_hash);
+      const validPassword = await bcrypt.compare(password, users[0].senha);
       if (!validPassword) {
         return {
           statusCode: 401,
@@ -68,7 +83,7 @@ exports.handler = async (event, context) => {
       const tokenPayload = {
         id: users[0].id,
         email: users[0].email,
-        name: users[0].name,
+        name: users[0].nome,
         role: users[0].role
       };
       
@@ -98,14 +113,12 @@ exports.handler = async (event, context) => {
 
     // GET /alunos
     if (path === '/alunos' && method === 'GET') {
-      const alunos = await sql`
-        SELECT * FROM alunos ORDER BY turma, nome
-      `;
+      const result = await pool.query('SELECT * FROM alunos WHERE ativo = true ORDER BY turma, nome');
       
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(alunos)
+        body: JSON.stringify(result.rows)
       };
     }
 
